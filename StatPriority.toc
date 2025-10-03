@@ -1,8 +1,8 @@
-# Interface: 110002
-# Title: Stat Priority Manager
-# Notes: Tracks character stats and recommends gear upgrades based on stat priorities
-# Author: YourName
-# Version: 1.0
+## Interface: 110200
+## Title: Stat Priority Manager
+## Notes: Tracks character stats and recommends gear upgrades based on stat priorities
+## Author: YourName
+## Version: 1.0
 ## SavedVariables: StatPriorityDB
 
 StatPriority.lua
