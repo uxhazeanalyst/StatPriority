@@ -452,8 +452,23 @@ eventFrame:RegisterEvent("BAG_UPDATE")
 eventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == "PLAYER_LOGIN" then
         InitDB()
-        print("|cFF00FF00Stat Priority Manager loaded!|r Type /sp to open")
+        print("|cFF00FF00StatPriority:|r Addon loaded! Type |cFFFFFF00/sp|r or |cFFFFFF00/statpriority|r to open")
+        print("|cFF00FF00StatPriority:|r Debug - Frame created:", frame:GetName())
     elseif (event == "PLAYER_EQUIPMENT_CHANGED" or event == "PLAYER_TALENT_UPDATE" or event == "BAG_UPDATE") and frame:IsShown() then
         C_Timer.After(0.5, function() addon:UpdateDisplay() end)
+    end
+end)
+
+-- Debug function
+local function DebugPrint(msg)
+    print("|cFFFF8800StatPriority Debug:|r " .. tostring(msg))
+end
+
+-- Make sure slash command is registered after login
+C_Timer.After(1, function()
+    if not SlashCmdList["STATPRIORITY"] then
+        DebugPrint("ERROR: Slash command not registered!")
+    else
+        DebugPrint("Slash command registered successfully")
     end
 end)
