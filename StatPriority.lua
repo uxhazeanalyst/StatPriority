@@ -1,3 +1,13 @@
+-- StatPriority.toc
+-- ## Interface: 110002
+-- ## Title: Stat Priority Manager
+-- ## Notes: Tracks character stats and recommends gear upgrades based on stat priorities
+-- ## Author: YourName
+-- ## Version: 1.0
+-- ## SavedVariables: StatPriorityDB
+
+-- StatPriority.lua
+
 local addonName, addon = ...
 local frame = CreateFrame("Frame", "StatPriorityFrame", UIParent, "BasicFrameTemplateWithInset")
 
@@ -134,31 +144,35 @@ local scanTooltip = CreateFrame("GameTooltip", "StatPriorityScanTooltip", nil, "
 scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
 
 local function GetItemStats(itemLink)
-    if not itemLink then return {} end
+    if not itemLink then return {haste = 0, crit = 0, mastery = 0, vers = 0} end
     
     scanTooltip:ClearLines()
     scanTooltip:SetHyperlink(itemLink)
     
     local stats = {haste = 0, crit = 0, mastery = 0, vers = 0}
     
-    for i = 2, scanTooltip:NumLines() do
+    local numLines = scanTooltip:NumLines()
+    if not numLines then return stats end
+    
+    for i = 2, numLines do
         local line = _G["StatPriorityScanTooltipTextLeft"..i]
         if line then
-            local text = line:GetText() or ""
-            
-            -- Match "+XXX Haste"
-            if text:match("Haste") then
-                local val = text:match("%+(%d+)")
-                if val then stats.haste = tonumber(val) end
-            elseif text:match("Critical Strike") then
-                local val = text:match("%+(%d+)")
-                if val then stats.crit = tonumber(val) end
-            elseif text:match("Mastery") then
-                local val = text:match("%+(%d+)")
-                if val then stats.mastery = tonumber(val) end
-            elseif text:match("Versatility") then
-                local val = text:match("%+(%d+)")
-                if val then stats.vers = tonumber(val) end
+            local text = line:GetText()
+            if text then
+                -- Match "+XXX Haste"
+                if text:match("Haste") then
+                    local val = text:match("%+(%d+)")
+                    if val then stats.haste = tonumber(val) or 0 end
+                elseif text:match("Critical Strike") then
+                    local val = text:match("%+(%d+)")
+                    if val then stats.crit = tonumber(val) or 0 end
+                elseif text:match("Mastery") then
+                    local val = text:match("%+(%d+)")
+                    if val then stats.mastery = tonumber(val) or 0 end
+                elseif text:match("Versatility") then
+                    local val = text:match("%+(%d+)")
+                    if val then stats.vers = tonumber(val) or 0 end
+                end
             end
         end
     end
@@ -234,43 +248,51 @@ local function ScanBagsForUpgrades(equippedItems, priority)
     local upgrades = {}
     
     for bag = 0, 4 do
-        for slot = 1, C_Container.GetContainerNumSlots(bag) do
-            local itemLink = C_Container.GetContainerItemLink(bag, slot)
-            if itemLink then
-                local _, _, _, _, _, _, _, _, equipSlot, _, _, _, _, _, _, _ = GetItemInfo(itemLink)
-                local itemID = GetItemInfoInstant(itemLink)
-                
-                if equipSlot and equipSlot ~= "" then
-                    -- Find which slot this can be equipped to
-                    local targetSlot = nil
-                    for invSlot = 1, 17 do
-                        local slotName = GetInventorySlotInfo(invSlot)
-                        if slotName and equipSlot == string.upper(slotName) then
-                            targetSlot = invSlot
-                            break
-                        end
-                    end
-                    
-                    if targetSlot and equippedItems[targetSlot] then
-                        local bagItemLevel = select(4, GetItemInfo(itemLink))
-                        local bagItemStats = GetItemStats(itemLink)
-                        local equippedItem = equippedItems[targetSlot]
+        local numSlots = C_Container.GetContainerNumSlots(bag)
+        if numSlots then
+            for slot = 1, numSlots do
+                local itemLink = C_Container.GetContainerItemLink(bag, slot)
+                if itemLink then
+                    local itemInfo = {GetItemInfo(itemLink)}
+                    if itemInfo and itemInfo[1] then
+                        local equipSlot = itemInfo[9]
+                        local equipSlot = itemInfo[9]
                         
-                        if bagItemLevel and bagItemLevel > equippedItem.ilvl then
-                            local statScore = CalculateStatScore(bagItemStats, priority)
-                            local currentScore = CalculateStatScore(equippedItem.stats, priority)
+                        if equipSlot and equipSlot ~= "" then
+                            -- Find which slot this can be equipped to
+                            local targetSlot = nil
+                            for invSlot = 1, 17 do
+                                local slotName = GetInventorySlotInfo(invSlot)
+                                if slotName and equipSlot:upper() == slotName:upper() then
+                                    targetSlot = invSlot
+                                    break
+                                end
+                            end
                             
-                            table.insert(upgrades, {
-                                slot = targetSlot,
-                                slotName = slotNames[targetSlot] or equipSlot,
-                                link = itemLink,
-                                ilvl = bagItemLevel,
-                                currentIlvl = equippedItem.ilvl,
-                                ilvlGain = bagItemLevel - equippedItem.ilvl,
-                                statScore = statScore,
-                                scoreGain = statScore - currentScore,
-                                stats = bagItemStats
-                            })
+                            if targetSlot and equippedItems[targetSlot] then
+                                local bagItemLevel = itemInfo[4]
+                                if bagItemLevel then
+                                    local bagItemStats = GetItemStats(itemLink)
+                                    local equippedItem = equippedItems[targetSlot]
+                                    
+                                    if bagItemLevel > equippedItem.ilvl then
+                                        local statScore = CalculateStatScore(bagItemStats, priority)
+                                        local currentScore = CalculateStatScore(equippedItem.stats, priority)
+                                        
+                                        table.insert(upgrades, {
+                                            slot = targetSlot,
+                                            slotName = slotNames[targetSlot] or equipSlot,
+                                            link = itemLink,
+                                            ilvl = bagItemLevel,
+                                            currentIlvl = equippedItem.ilvl,
+                                            ilvlGain = bagItemLevel - equippedItem.ilvl,
+                                            statScore = statScore,
+                                            scoreGain = statScore - currentScore,
+                                            stats = bagItemStats
+                                        })
+                                    end
+                                end
+                            end
                         end
                     end
                 end
