@@ -1,13 +1,3 @@
--- StatPriority.toc
--- ## Interface: 110002
--- ## Title: Stat Priority Manager
--- ## Notes: Tracks character stats and recommends gear upgrades based on stat priorities
--- ## Author: YourName
--- ## Version: 1.0
--- ## SavedVariables: StatPriorityDB
-
--- StatPriority.lua
-
 local addonName, addon = ...
 local frame = CreateFrame("Frame", "StatPriorityFrame", UIParent, "BasicFrameTemplateWithInset")
 
